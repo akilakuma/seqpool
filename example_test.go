@@ -1,4 +1,4 @@
-package main
+package seqpool
 
 import (
 	"fmt"
@@ -6,8 +6,9 @@ import (
 	"time"
 )
 
-// main example: simulates sending tasks of multiple types while monitoring waiting new type tasks
-func main() {
+// example: simulates sending tasks of multiple types while monitoring waiting new type tasks
+func Example_basic() {
+
 	rand.Seed(time.Now().UnixNano())
 	fn := func() {
 		time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
