@@ -159,3 +159,9 @@ func dedicatedWorker(taskType string,
 		}
 	}
 }
+
+// NewTypePendingNotification returns a read-only channel for monitoring
+// tasks that are waiting due to worker limit reached.
+func NewTypePendingNotification() <-chan Task {
+	return pendingNewTypeChan
+}

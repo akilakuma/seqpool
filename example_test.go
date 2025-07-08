@@ -44,7 +44,7 @@ func Example_basic() {
 
 	// Simulate external monitoring of waiting new type tasks
 	go func() {
-		for pendingTask := range pendingNewTypeChan {
+		for pendingTask := range NewTypePendingNotification() {
 			fmt.Printf("[Monitor] Detected waiting new type task: %s (Type: %s)\n", pendingTask.Name, pendingTask.Type)
 		}
 	}()

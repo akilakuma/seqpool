@@ -30,54 +30,55 @@ go get github.com/akilakuma/seqpool
 package main
 
 import (
-	"fmt"
-	"math/rand"
-	"time"
+   "fmt"
+   "math/rand"
+   "time"
 
-	"github.com/akilakuma/seqpool"
+   "github.com/akilakuma/seqpool"
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-	fn := func() {
-		time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
-	}
+   rand.Seed(time.Now().UnixNano())
+   fn := func() {
+      time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
+   }
 
-	config := seqpool.Config{
-		TaskBuffer:          100,
-		WorkBuffer:          100,
-		ResultBuffer:        100,
-		MaxDedicatedWorkers: 3,
-		WorkerIdleTimeout:   5 * time.Second,
-	}
-	tasksIn := seqpool.NewSeq(config)
+   config := seqpool.Config{
+      TaskBuffer:          100,
+      WorkBuffer:          100,
+      ResultBuffer:        100,
+      MaxDedicatedWorkers: 3,
+      WorkerIdleTimeout:   5 * time.Second,
+   }
+   tasksIn := seqpool.NewSeq(config)
 
-	go func() {
-		types := []string{"A", "B", "C", "D", "E"}
-		for i := 0; i < 10; i++ {
-			typ := types[rand.Intn(len(types))]
-			t := seqpool.Task{
-				Type: typ,
-				Name: fmt.Sprintf("%s-task-%d", typ, i),
-				Fn:   fn,
-			}
-			tasksIn <- t
-			time.Sleep(500 * time.Millisecond)
-		}
-		close(tasksIn)
-	}()
+   go func() {
+      types := []string{"A", "B", "C", "D", "E"}
+      for i := 0; i < 10; i++ {
+         typ := types[rand.Intn(len(types))]
+         t := seqpool.Task{
+            Type: typ,
+            Name: fmt.Sprintf("%s-task-%d", typ, i),
+            Fn:   fn,
+         }
+         tasksIn <- t
+         time.Sleep(500 * time.Millisecond)
+      }
+      close(tasksIn)
+   }()
 
-	go func() {
-		for pending := range seqpool.PendingNewTypeChan() {
-			fmt.Printf("[Monitor] Waiting task: %s (Type: %s)\n", pending.Name, pending.Type)
-		}
-	}()
+   go func() {
+      for pending := range seqpool.NewTypePendingNotification() {
+         fmt.Printf("[Monitor] Detected waiting new type task: %s (Type: %s)\n", pending.Name, pending.Type)
+      }
+   }()
 
-	select {
-	case <-time.After(30 * time.Second):
-		fmt.Println("All tasks done.")
-	}
+   select {
+   case <-time.After(30 * time.Second):
+      fmt.Println("All tasks done.")
+   }
 }
+
 
 ```
 # 設計理念
@@ -88,7 +89,7 @@ func main() {
    使用 MaxDedicatedWorkers 限制總共同時存在的 worker 數量，避免過度佔用資源。
 
 3. 排隊與監控
-   當 worker 數量達上限，新的型別任務會暫存，並透過 pendingNewTypeChan 提供即時等待狀態通知。
+   當 worker 數量達上限，新的型別任務會暫存，並透過 NewTypePendingNotification 提供即時等待狀態通知。
 
 4. 全域順序輸出（Aggregator）
    所有任務無論類型，輸出順序都會依照傳入順序的 GlobalSeq 序號，確保使用者在結果處理上簡單一致。
@@ -118,8 +119,11 @@ type Config struct {
 }
 
 ```
-func PendingNewTypeChan() <-chan Task
+func NewTypePendingNotification() <-chan Task
 提供可讀取的新型別等待任務 channel，讓外部可用於監控或調整資源。
+這個通道會在：
+- 任務類型首次出現
+- 當下無法建立新 worker（因為 worker 已達上限）
 
 # 授權 License
 MIT License
