@@ -125,5 +125,29 @@ func NewTypePendingNotification() <-chan Task
 - 任務類型首次出現
 - 當下無法建立新 worker（因為 worker 已達上限）
 
+
+### 流程圖
+```go
+NewSeq() 回傳 tasksIn
+        │
+        ▼
+  外部送入 Task（tasksIn）
+        │
+        ▼
+ dispatcher:
+   ├─ 如果已有 worker：直接丟進 worker channel
+   ├─ 如果無 worker：
+   │    ├─ semaphore 可用：創建 worker，立刻送 task
+   │    └─ semaphore 不可用：task 丟進 pendingNewTypes
+   │                           並推進 pendingNewTypeChan
+        │
+        ▼
+ dedicatedWorker（per Type）執行 task.Fn()
+        │
+        ▼
+ resultChan 收到結果 → aggregator 負責按 GlobalSeq 順序輸出
+```
+
+
 # 授權 License
 MIT License
